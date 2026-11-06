@@ -11,6 +11,7 @@ Smaller single-purpose scripts live in [purview-scripts](https://github.com/SamK
 | Area | Create | Update existing |
 | --- | --- | --- |
 | Sensitivity labels and sublabels (encryption, header, footer, watermark) | Yes | Settings are re-applied from the config on every run |
+| Label groups (modern label scheme) | Yes | No settings to update |
 | Container labels for sites and Microsoft 365 groups | Yes | Settings are re-applied |
 | Label policies | Yes | Labels added and removed, advanced settings re-applied |
 | DLP policies and rules | Yes | Locations, mode and rule settings |
@@ -38,8 +39,8 @@ purview-as-code/
 │   ├── Set-SharePointAppEnforcedRestrictions.ps1
 │   └── Set-SiteLabelDefaults.ps1
 ├── examples/
-│   ├── baseline.json              # Four-level label taxonomy, credit card DLP, 7-year mail retention
-│   └── nl-smb.json                # Baseline plus BSN DLP, a container label and Dutch fiscal retention labels
+│   ├── baseline.json              # Four-level label taxonomy with label groups, credit card DLP, 7-year mail retention
+│   └── nl-smb.json                # Classic label scheme, BSN DLP, a container label and Dutch fiscal retention labels
 └── tests/
     └── Test-PurviewConfig.ps1     # Validate a config before you deploy it
 ```
@@ -89,10 +90,21 @@ The examples set headers and footers only. The labels module also supports a wat
 
 `Layout` is `Horizontal` or `Diagonal`. `FontColor` takes a `#xxxxxx` hex value.
 
+## Classic or modern label scheme
+
+Tenants created from 1 October 2025 use the modern label scheme, and older tenants can migrate to it. In the modern scheme, sublabels sit in a **label group** instead of under a parent label. A label group only has a name, display name, description and priority, and you can't publish it in a label policy: you publish the labels inside it.
+
+You can see which scheme you're on in the Purview portal under **Information Protection > Sensitivity labels**. A green message bar there confirms the modern scheme.
+
+- **Modern scheme:** use `"IsLabelGroup": true` on the top-level label and list only the labels inside the group in your label policies. See `examples/baseline.json`. `Test-PurviewConfig.ps1` flags a label group that has settings or is published in a policy.
+- **Classic scheme:** leave `IsLabelGroup` out. The top-level label is created as a parent label, and you list the parent labels in the policy as well. See `examples/nl-smb.json`.
+
+Migrating from classic to modern is a one-way step in the portal. Read [Migrate parent sensitivity labels to label groups](https://learn.microsoft.com/purview/migrate-sensitivity-label-scheme) before you do it, and update your config afterwards.
+
 ## Things to know
 
 - **-WhatIf is handled by these scripts, not by Microsoft.** Security & Compliance PowerShell ignores `-WhatIf`. The modules check `ShouldProcess` before every change instead, and the deploy script passes `-WhatIf` explicitly to every module function.
-- **Publish parent labels too.** If a label policy contains sublabels, list the parent labels in the policy as well.
+- **Classic scheme: publish parent labels too.** If a label policy contains sublabels, list the parent labels in the policy as well. On the modern scheme, don't: label groups can't be published.
 - **Changes take time.** Label policies can take up to 24 hours to reach clients, and published retention labels can take up to 7 days to show up on a site.
 - **Delete is not supported.** Removing something from the config doesn't remove it from the tenant. That's on purpose.
 - **The export is a starting point, not a round trip.** `Export-PurviewConfig.ps1` writes a flat label list with parent IDs and only header markings. Clean it up before you feed it to the deploy script.

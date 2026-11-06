@@ -1,5 +1,5 @@
 {
-  "ClientName": "Contoso (baseline example)",
+  "ClientName": "Contoso (baseline example, modern label scheme)",
   "TenantDomain": "contoso.onmicrosoft.com",
   "SensitivityLabels": [
     {
@@ -38,6 +38,7 @@
     },
     {
       "Name": "Confidential",
+      "IsLabelGroup": true,
       "DisplayName": "Confidential",
       "Tooltip": "Sensitive business data that could cause damage if shared with unauthorized people.",
       "Comment": "For sensitive business information.",
@@ -83,6 +84,7 @@
     },
     {
       "Name": "HighlyConfidential",
+      "IsLabelGroup": true,
       "DisplayName": "Highly Confidential",
       "Tooltip": "Very sensitive data. Unauthorized disclosure could cause serious damage.",
       "Comment": "Highest classification level.",
@@ -139,10 +141,8 @@
       "Labels": [
         "Public",
         "Internal",
-        "Confidential",
         "Confidential-AllEmployees",
         "Confidential-SpecificPeople",
-        "HighlyConfidential",
         "HighlyConfidential-AllEmployees",
         "HighlyConfidential-SpecificPeople"
       ],

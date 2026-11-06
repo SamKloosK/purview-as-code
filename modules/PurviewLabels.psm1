@@ -4,6 +4,14 @@
 # Important: Content marking (headers, footers, watermarks) is applied via
 # Set-Label after label creation, using the ApplyContentMarking* and
 # ApplyWaterMarking* parameters. These are NOT available on New-Label.
+#
+# Label groups: tenants on the modern label scheme (all tenants created from
+# 1 October 2025, and tenants that migrated) group sublabels under a label group
+# instead of a parent label. Set "IsLabelGroup": true on a top-level label in the
+# config to create it with New-Label -IsLabelGroup. A label group has only a name,
+# display name, description and priority: no scope, encryption or content marking,
+# and it can't be published in a label policy. On the classic scheme, leave
+# IsLabelGroup out and the top-level label is created as a parent label.
 
 function Deploy-SensitivityLabels {
     [CmdletBinding(SupportsShouldProcess)]
@@ -31,15 +39,22 @@ function Deploy-SingleLabel {
 
     $labelName = $LabelConfig.Name
     $displayName = $LabelConfig.DisplayName
+    $isLabelGroup = [bool]$LabelConfig.IsLabelGroup
+    $kind = if ($isLabelGroup) { "label group" } else { "sensitivity label" }
     $existingLabel = Get-Label -Identity $labelName -ErrorAction SilentlyContinue
 
     if ($existingLabel) {
-        Write-Host "  Already exists: $labelName (re-applying settings from config)" -ForegroundColor Gray
-        Set-PurviewLabelSettings -LabelName $labelName -LabelConfig $LabelConfig
+        if ($isLabelGroup) {
+            Write-Host "  Already exists: $labelName (label group, no settings to apply)" -ForegroundColor Gray
+        }
+        else {
+            Write-Host "  Already exists: $labelName (re-applying settings from config)" -ForegroundColor Gray
+            Set-PurviewLabelSettings -LabelName $labelName -LabelConfig $LabelConfig
+        }
     }
     else {
-        if ($PSCmdlet.ShouldProcess($labelName, "Create sensitivity label")) {
-            Write-Host "  Creating label: $labelName" -ForegroundColor Yellow
+        if ($PSCmdlet.ShouldProcess($labelName, "Create $kind")) {
+            Write-Host "  Creating $($kind): $labelName" -ForegroundColor Yellow
 
             # New-Label only takes basic parameters
             $newParams = @{
@@ -49,12 +64,16 @@ function Deploy-SingleLabel {
                 Comment     = $LabelConfig.Comment
             }
 
+            if ($isLabelGroup) {
+                $newParams.IsLabelGroup = $true
+            }
+
             # Scope: e.g. "File, Email" or "Site, UnifiedGroup" for container labels
-            if ($LabelConfig.Scope) {
+            if ($LabelConfig.Scope -and -not $isLabelGroup) {
                 $newParams.ContentType = $LabelConfig.Scope
             }
 
-            # Parent label for sublabels
+            # Parent label or label group for sublabels
             if ($ParentName) {
                 $parentLabel = Get-Label -Identity $ParentName
                 $newParams.ParentId = $parentLabel.Guid
@@ -63,8 +82,10 @@ function Deploy-SingleLabel {
             $createdLabel = New-Label @newParams
             Write-Host "  Created: $labelName" -ForegroundColor Green
 
-            # Apply encryption and content marking via Set-Label
-            Set-PurviewLabelSettings -LabelName $labelName -LabelConfig $LabelConfig
+            # Apply encryption and content marking via Set-Label (not for label groups)
+            if (-not $isLabelGroup) {
+                Set-PurviewLabelSettings -LabelName $labelName -LabelConfig $LabelConfig
+            }
         }
     }
 

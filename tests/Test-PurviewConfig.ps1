@@ -36,6 +36,7 @@ if ($config.TenantDomain -and $config.TenantDomain -notmatch '\.onmicrosoft\.com
 # Validate sensitivity labels
 if ($config.SensitivityLabels) {
     $script:allLabelNames = @()
+    $script:labelGroupNames = @()
 
     function Test-LabelConfig {
         param([array]$Labels, [string]$ParentPath)
@@ -51,6 +52,16 @@ if ($config.SensitivityLabels) {
                 $script:errors += "Duplicate label name: $($label.Name)"
             }
             $script:allLabelNames += $label.Name
+
+            # Label groups (modern label scheme) only take a name, display name and description
+            if ($label.IsLabelGroup) {
+                if ($ParentPath) { $script:errors += "Label '$path' is a label group but isn't a top-level label" }
+                foreach ($setting in 'Scope', 'Encryption', 'ContentMarking', 'SiteAndGroupProtection') {
+                    if ($label.$setting) { $script:errors += "Label group '$path' has $setting, which label groups don't support" }
+                }
+                if (-not $label.SubLabels) { $script:warnings += "Label group '$path' has no sublabels" }
+                $script:labelGroupNames += $label.Name
+            }
 
             # Check encryption config
             if ($label.Encryption) {
@@ -81,6 +92,12 @@ if ($config.LabelPolicies) {
         if (-not $policy.Name) { $script:errors += "Label policy missing Name" }
         if (-not $policy.Labels -or $policy.Labels.Count -eq 0) {
             $script:warnings += "Label policy '$($policy.Name)' has no labels assigned"
+        }
+
+        foreach ($group in @($script:labelGroupNames)) {
+            if ($group -and $policy.Labels -contains $group) {
+                $script:errors += "Label policy '$($policy.Name)' publishes label group '$group'. Publish the labels in the group instead."
+            }
         }
 
         if ($policy.Settings -and $policy.Settings.defaultlabelid -match "REPLACE") {

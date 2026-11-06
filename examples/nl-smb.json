@@ -1,5 +1,5 @@
 {
-  "ClientName": "Contoso B.V. (Dutch SMB example)",
+  "ClientName": "Contoso B.V. (Dutch SMB example, classic label scheme)",
   "TenantDomain": "contoso.onmicrosoft.com",
   "SensitivityLabels": [
     {
