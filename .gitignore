@@ -1,0 +1,15 @@
+# Your own tenant configs and exports
+configs/
+exports/
+*.local.json
+
+# Secrets and credentials
+*.pfx
+*.cer
+*.key
+secrets.json
+
+# Editors and OS
+.vscode/
+Thumbs.db
+.DS_Store

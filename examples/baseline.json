@@ -1,0 +1,240 @@
+{
+  "ClientName": "Contoso (baseline example)",
+  "TenantDomain": "contoso.onmicrosoft.com",
+  "SensitivityLabels": [
+    {
+      "Name": "Public",
+      "DisplayName": "Public",
+      "Tooltip": "Data that is intended for public consumption.",
+      "Comment": "No protection applied.",
+      "ContentMarking": {
+        "Header": {
+          "Text": "Classification: Public",
+          "FontSize": 10,
+          "FontColor": "#000000",
+          "Alignment": "Center"
+        }
+      }
+    },
+    {
+      "Name": "Internal",
+      "DisplayName": "Internal",
+      "Tooltip": "Data intended for internal use only.",
+      "Comment": "Default label for all organizational content.",
+      "ContentMarking": {
+        "Header": {
+          "Text": "Classification: Internal",
+          "FontSize": 10,
+          "FontColor": "#000000",
+          "Alignment": "Center"
+        },
+        "Footer": {
+          "Text": "Internal Use Only",
+          "FontSize": 8,
+          "FontColor": "#808080",
+          "Alignment": "Center"
+        }
+      }
+    },
+    {
+      "Name": "Confidential",
+      "DisplayName": "Confidential",
+      "Tooltip": "Sensitive business data that could cause damage if shared with unauthorized people.",
+      "Comment": "For sensitive business information.",
+      "SubLabels": [
+        {
+          "Name": "Confidential-AllEmployees",
+          "DisplayName": "All Employees",
+          "Tooltip": "Confidential data accessible to all employees.",
+          "Comment": "Encrypted, accessible to all employees.",
+          "Encryption": {
+            "ProtectionType": "Template",
+            "EncryptionRightsDefinitions": "contoso.com:VIEW,VIEWRIGHTSDATA,DOCEDIT,EDIT,PRINT,EXTRACT,REPLY,REPLYALL,FORWARD",
+            "EncryptionOfflineAccessDays": 30,
+            "EncryptionContentExpiredOnDateInDaysOrNever": "Never"
+          },
+          "ContentMarking": {
+            "Header": {
+              "Text": "Classification: Confidential",
+              "FontSize": 10,
+              "FontColor": "#FF0000",
+              "Alignment": "Center"
+            }
+          }
+        },
+        {
+          "Name": "Confidential-SpecificPeople",
+          "DisplayName": "Specific People",
+          "Tooltip": "Confidential data - user selects who can access.",
+          "Comment": "User-defined encryption permissions.",
+          "Encryption": {
+            "ProtectionType": "UserDefined"
+          },
+          "ContentMarking": {
+            "Header": {
+              "Text": "Classification: Confidential - Restricted",
+              "FontSize": 10,
+              "FontColor": "#FF0000",
+              "Alignment": "Center"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Name": "HighlyConfidential",
+      "DisplayName": "Highly Confidential",
+      "Tooltip": "Very sensitive data. Unauthorized disclosure could cause serious damage.",
+      "Comment": "Highest classification level.",
+      "SubLabels": [
+        {
+          "Name": "HighlyConfidential-AllEmployees",
+          "DisplayName": "All Employees",
+          "Tooltip": "Highly confidential, accessible to all employees with restrictions.",
+          "Comment": "Encrypted with restricted permissions.",
+          "Encryption": {
+            "ProtectionType": "Template",
+            "EncryptionRightsDefinitions": "contoso.com:VIEW,VIEWRIGHTSDATA,DOCEDIT,EDIT",
+            "EncryptionOfflineAccessDays": 7,
+            "EncryptionContentExpiredOnDateInDaysOrNever": "Never"
+          },
+          "ContentMarking": {
+            "Header": {
+              "Text": "Classification: Highly Confidential",
+              "FontSize": 10,
+              "FontColor": "#FF0000",
+              "Alignment": "Center"
+            },
+            "Footer": {
+              "Text": "Do not distribute outside the organization",
+              "FontSize": 8,
+              "FontColor": "#FF0000",
+              "Alignment": "Center"
+            }
+          }
+        },
+        {
+          "Name": "HighlyConfidential-SpecificPeople",
+          "DisplayName": "Specific People",
+          "Tooltip": "Highly confidential - user selects who can access.",
+          "Comment": "User-defined encryption for most sensitive content.",
+          "Encryption": {
+            "ProtectionType": "UserDefined"
+          },
+          "ContentMarking": {
+            "Header": {
+              "Text": "Classification: Highly Confidential - Restricted",
+              "FontSize": 10,
+              "FontColor": "#FF0000",
+              "Alignment": "Center"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "LabelPolicies": [
+    {
+      "Name": "Default-Label-Policy",
+      "Labels": [
+        "Public",
+        "Internal",
+        "Confidential",
+        "Confidential-AllEmployees",
+        "Confidential-SpecificPeople",
+        "HighlyConfidential",
+        "HighlyConfidential-AllEmployees",
+        "HighlyConfidential-SpecificPeople"
+      ],
+      "ExchangeLocation": [
+        "All"
+      ],
+      "Settings": {
+        "requiredowngradejustification": "true",
+        "defaultlabelid": "REPLACE-WITH-INTERNAL-LABEL-GUID"
+      }
+    }
+  ],
+  "DlpPolicies": [
+    {
+      "Name": "DLP-FinancialData",
+      "Comment": "Protect financial data such as credit card numbers and bank account numbers.",
+      "Mode": "TestWithNotifications",
+      "ExchangeLocation": [
+        "All"
+      ],
+      "SharePointLocation": [
+        "All"
+      ],
+      "OneDriveLocation": [
+        "All"
+      ],
+      "TeamsLocation": [
+        "All"
+      ],
+      "Rules": [
+        {
+          "Name": "DLP-FinancialData-HighVolume",
+          "ContentContainsSensitiveInformation": [
+            {
+              "name": "Credit Card Number",
+              "minCount": 5
+            }
+          ],
+          "BlockAccess": true,
+          "NotifyUser": "SiteAdmin",
+          "GenerateIncidentReport": "SiteAdmin",
+          "ReportSeverityLevel": "High"
+        },
+        {
+          "Name": "DLP-FinancialData-LowVolume",
+          "ContentContainsSensitiveInformation": [
+            {
+              "name": "Credit Card Number",
+              "minCount": 1
+            }
+          ],
+          "BlockAccess": false,
+          "NotifyUser": "LastModifier",
+          "ReportSeverityLevel": "Medium"
+        }
+      ]
+    }
+  ],
+  "RetentionLabels": [
+    {
+      "Name": "Retain-7Years",
+      "Comment": "Retain content for 7 years then delete.",
+      "RetentionDuration": 2555,
+      "RetentionAction": "Delete",
+      "RetentionType": "CreationAgeInDays",
+      "IsRecordLabel": false
+    },
+    {
+      "Name": "Retain-10Years-Record",
+      "Comment": "Retain as regulatory record for 10 years.",
+      "RetentionDuration": 3650,
+      "RetentionAction": "Delete",
+      "RetentionType": "CreationAgeInDays",
+      "IsRecordLabel": true
+    }
+  ],
+  "RetentionPolicies": [
+    {
+      "Name": "Retention-Email-7Years",
+      "Comment": "Retain all email for 7 years.",
+      "ExchangeLocation": [
+        "All"
+      ],
+      "Rules": [
+        {
+          "Name": "Retention-Email-7Years-Rule",
+          "RetentionDuration": 2555,
+          "RetentionDurationDisplayHint": "Days",
+          "RetentionComplianceAction": "Keep",
+          "ExpirationDateOption": "CreationAgeInDays"
+        }
+      ]
+    }
+  ]
+}
