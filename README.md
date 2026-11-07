@@ -6,6 +6,8 @@ A config file is easier to review and repeat than clicking through the Purview p
 
 Smaller single-purpose scripts live in [purview-scripts](https://github.com/SamKloosK/purview-scripts).
 
+The background, and what I fixed before publishing it, is in the blog post [Purview as code: why -WhatIf deployed everything](https://www.argusit.nl/en/blog/purview-as-code-whatif).
+
 ## What it covers
 
 | Area | Create | Update existing |
