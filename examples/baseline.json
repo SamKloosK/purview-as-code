@@ -71,7 +71,8 @@
           "Comment": "User-defined encryption permissions.",
           "Encryption": {
             "ProtectionType": "UserDefined",
-            "PromptUser": true
+            "PromptUser": true,
+            "DoNotForward": true
           },
           "ContentMarking": {
             "Header": {
@@ -124,7 +125,8 @@
           "Comment": "User-defined encryption for most sensitive content.",
           "Encryption": {
             "ProtectionType": "UserDefined",
-            "PromptUser": true
+            "PromptUser": true,
+            "DoNotForward": true
           },
           "ContentMarking": {
             "Header": {

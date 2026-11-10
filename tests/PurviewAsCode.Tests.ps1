@@ -171,6 +171,15 @@ Describe 'Safety checks' {
         Test-PurviewConfig -ConfigFile $path 6>$null | Should -BeFalse
     }
 
+    It 'refuses UserDefined encryption for files and email without DoNotForward or EncryptOnly' {
+        $path = New-TestConfig -Change {
+            param($c)
+            $label = $c.SensitivityLabels.SubLabels | Where-Object { $_.Encryption.ProtectionType -eq 'UserDefined' } | Select-Object -First 1
+            $label.Encryption.Remove('DoNotForward')
+        }
+        Test-PurviewConfig -ConfigFile $path 6>$null | Should -BeFalse
+    }
+
     It 'refuses a sublabel published without its parent label (classic scheme)' {
         $path = New-TestConfig -Example 'nl-smb.json' -Change {
             param($c)

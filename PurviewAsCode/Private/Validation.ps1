@@ -41,8 +41,20 @@ function Get-ConfigProblems {
                         if (-not $e.EncryptionRightsDefinitions) { $errors.Add("Label '$path' uses Template encryption without EncryptionRightsDefinitions") }
                     }
                     'UserDefined' {
-                        if (-not ($e.PromptUser -or $e.DoNotForward -or $e.EncryptOnly)) {
-                            $warnings.Add("Label '$path' uses UserDefined encryption without PromptUser, DoNotForward or EncryptOnly. The portal requires at least one.")
+                        # A label without Scope gets File and Email. For that combination the service
+                        # rejects UserDefined unless PromptUser and DoNotForward or EncryptOnly are set.
+                        $scope = if ($l.Scope) { "$($l.Scope)" -split ',\s*' } else { 'File', 'Email' }
+                        $forFiles = $scope -contains 'File'
+                        $forEmail = $scope -contains 'Email'
+                        $mailOption = $e.DoNotForward -or $e.EncryptOnly
+                        if ($forFiles -and $forEmail -and -not ($e.PromptUser -and $mailOption)) {
+                            $errors.Add("Label '$path' uses UserDefined encryption for files and email: set PromptUser and either DoNotForward or EncryptOnly")
+                        }
+                        elseif ($forFiles -and -not $forEmail -and -not $e.PromptUser) {
+                            $warnings.Add("Label '$path' uses UserDefined encryption for files without PromptUser")
+                        }
+                        elseif ($forEmail -and -not $forFiles -and -not $mailOption) {
+                            $warnings.Add("Label '$path' uses UserDefined encryption for email without DoNotForward or EncryptOnly")
                         }
                     }
                     $null { $errors.Add("Label '$path' has Encryption without ProtectionType") }
