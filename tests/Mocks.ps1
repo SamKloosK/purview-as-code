@@ -153,7 +153,7 @@ function global:Set-ComplianceTag { [CmdletBinding()] param($Identity, $Comment,
     if ($RetentionDuration) { $t.RetentionDuration = $RetentionDuration }
 }
 
-function global:Get-RetentionCompliancePolicy { [CmdletBinding()] param($Identity) $global:MockTenant.RetPolicies[$Identity] }
+function global:Get-RetentionCompliancePolicy { [CmdletBinding()] param($Identity, [switch]$DistributionDetail) $global:MockTenant.RetPolicies[$Identity] }
 function global:New-RetentionCompliancePolicy { [CmdletBinding()] param($Name, $Comment, $ExchangeLocation, $SharePointLocation, $OneDriveLocation, $ModernGroupLocation, $TeamsChannelLocation, $TeamsChatLocation)
     Write-MockCall 'New-RetentionCompliancePolicy' $Name
     $global:MockTenant.RetPolicies[$Name] = [pscustomobject]@{ Name = $Name; ExchangeLocation = (ConvertTo-MockLocation $ExchangeLocation); SharePointLocation = (ConvertTo-MockLocation $SharePointLocation)

@@ -56,7 +56,8 @@ function Sync-RetentionPolicyObject {
     param([hashtable]$Policy, [string]$Area, [switch]$AllowRemoval)
 
     $name = $Policy.Name
-    $existing = Get-RetentionCompliancePolicy -Identity $name -ErrorAction SilentlyContinue
+    # Without -DistributionDetail the *Location properties aren't reliable (per the cmdlet docs).
+    $existing = Get-RetentionCompliancePolicy -Identity $name -DistributionDetail -ErrorAction SilentlyContinue
 
     if (-not $existing) {
         $locations = $script:RetentionLocations | Where-Object { $Policy["${_}Location"] } | ForEach-Object { "${_}: $($Policy["${_}Location"] -join ', ')" }
