@@ -40,7 +40,7 @@ function Assert-PurviewTenant {
 
     $session = @(Get-ConnectionInformation | Where-Object { $_.IsEopSession -and $_.State -eq 'Connected' }) | Select-Object -First 1
     if (-not $session) {
-        throw "No Security & Compliance PowerShell session found. Connect first, or leave out -SkipConnection."
+        throw "No Security & Compliance PowerShell session found. Connect first, or leave out -UseExistingSession."
     }
     $expected = if ($TenantId) { $TenantId } else { Resolve-TenantId -Domain $TenantDomain }
     if ("$($session.TenantID)" -ne $expected) {
