@@ -126,7 +126,8 @@ App-only connections use certificate-based authentication: an app registration w
 - Label order (priority) isn't managed. On a new tenant the creation order wins.
 - Label policies only take Exchange locations and advanced settings, not scoped policies or exceptions.
 - DLP rules cover sensitive info types and the main actions, not advanced rules.
-- Purview stores label settings in `LabelActions` as key/value pairs. Not every key name has been confirmed in a tenant yet; where one isn't found, the plan says "current value not readable" and sets the value again, so a wrong guess costs a write, not a wrong setting.
+- DLP policies, label policies and retention labels have been planned against a real tenant (see below) but not yet created by this version in one.
+- Purview stores label settings in `LabelActions` as key/value pairs, and I couldn't find the key names documented. If one is missing in your tenant, the plan says "current value not readable" and sets the value again, so a wrong guess costs a write, not a wrong setting.
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed per version.
 
@@ -136,7 +137,17 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed per version.
 Invoke-Pester ./tests
 ```
 
-The tests run against stand-ins for the Security & Compliance cmdlets with the same parameter sets as the real ones. They check that `-WhatIf` never writes, that a second run writes nothing, that DLP locations go through `AddXxxLocation`, and that failures and wrong tenants stop the run. They don't replace a test in a demo tenant.
+The tests run against stand-ins for the Security & Compliance cmdlets with the same parameter sets as the real ones. They check that `-WhatIf` never writes, that a second run writes nothing, that DLP locations go through `AddXxxLocation`, and that failures and wrong tenants stop the run. They don't replace a test in a real tenant.
+
+### Tested in a tenant
+
+10 November 2026, ExchangeOnlineManagement 3.4.0:
+
+- A `-WhatIf` run of the baseline example against a tenant that already had some of its labels changed nothing, and every line of the plan matched what the tenant really had.
+- Two test labels, one with Template and one with UserDefined encryption, were created, read back and compared: a second run reported no changes. Changing the offline access days of one updated only that setting, and the run after that reported no changes again.
+- The `LabelActions` key names the module reads for encryption, header, footer, watermark and site and group settings were all confirmed.
+
+That test found two bugs, both fixed in 0.2.0: retention policy locations were read without `-DistributionDetail`, and the examples used UserDefined encryption that the service rejects for labels that cover files and email.
 
 ## License
 

@@ -23,6 +23,8 @@ Fixed:
 - Display name, tooltip and comment of existing labels weren't updated.
 - Switching the unmanaged devices setting of a container label left the previous setting on.
 - User-defined encryption couldn't set `PromptUser`, `DoNotForward` or `EncryptOnly`.
+- Retention policy locations are read with `-DistributionDetail`. Without it an existing policy with Exchange set to All showed up as a change.
+- UserDefined encryption on a label that covers files and email needs `PromptUser` and either `DoNotForward` or `EncryptOnly`, or `Set-Label` rejects it. This is a validation error now, and the examples set `DoNotForward`.
 
 Breaking: `scripts/Deploy-PurviewConfig.ps1` and `tests/Test-PurviewConfig.ps1` are replaced by `Invoke-PurviewDeployment` and `Test-PurviewConfig` in the module.
 
