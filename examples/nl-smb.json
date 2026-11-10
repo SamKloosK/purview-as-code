@@ -1,4 +1,5 @@
 {
+  "$schema": "../schema/purview-config.schema.json",
   "ClientName": "Contoso B.V. (Dutch SMB example, classic label scheme)",
   "TenantDomain": "contoso.onmicrosoft.com",
   "SensitivityLabels": [
@@ -68,7 +69,8 @@
           "Tooltip": "Confidential data - user selects who can access.",
           "Comment": "User-defined encryption permissions.",
           "Encryption": {
-            "ProtectionType": "UserDefined"
+            "ProtectionType": "UserDefined",
+            "PromptUser": true
           },
           "ContentMarking": {
             "Header": {
@@ -119,7 +121,8 @@
           "Tooltip": "Highly confidential - user selects who can access.",
           "Comment": "User-defined encryption for most sensitive content.",
           "Encryption": {
-            "ProtectionType": "UserDefined"
+            "ProtectionType": "UserDefined",
+            "PromptUser": true
           },
           "ContentMarking": {
             "Header": {

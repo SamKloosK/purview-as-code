@@ -1,116 +1,143 @@
 # Purview-as-Code
 
-PowerShell modules that deploy a Microsoft Purview configuration from a JSON file. You describe the sensitivity labels, label policies, DLP policies, retention labels and retention policies you want, and the deploy script creates what's missing in the tenant.
+[![CI](https://github.com/SamKloosK/purview-as-code/actions/workflows/ci.yml/badge.svg)](https://github.com/SamKloosK/purview-as-code/actions/workflows/ci.yml)
 
-A config file is easier to review and repeat than clicking through the Purview portal, and git shows you what changed and when.
+A PowerShell module that deploys a Microsoft Purview configuration from a JSON file: sensitivity labels, label groups, label policies, DLP policies and rules, retention labels and retention policies.
 
-Smaller single-purpose scripts live in [purview-scripts](https://github.com/SamKloosK/purview-scripts).
+It reads the tenant first and shows you a plan: what it will create, what it will change (old value, new value), what already matches, and what's in the tenant but not in your config. Only then does it apply anything, and only the differences. Security & Compliance PowerShell ignores `-WhatIf`; here `-WhatIf` gives you the plan and stops.
 
-The background, and what I fixed before publishing it, is in the blog post [Purview as code: why -WhatIf deployed everything](https://www.argusit.nl/en/blog/purview-as-code-whatif).
+```
+PS> Invoke-PurviewDeployment -ConfigFile .\configs\contoso.json -WhatIf
+
+Tenant verified: contoso.onmicrosoft.com (11111111-2222-3333-4444-555555555555)
+Contoso: plan only (WhatIf)
+
+Sensitivity labels
+  = Sensitivity label      Public
+  = Sensitivity label      Internal
+  ! Sensitivity label      Internal
+      Footer is on in the tenant but not in the config (left as is)
+  = Label group            HighlyConfidential
+  ~ Sensitivity label      HighlyConfidential-AllEmployees
+      EncryptionOfflineAccessDays: '7' -> '3'
+
+DLP policies
+  ~ DLP policy             DLP-FinancialData
+      mode: 'TestWithNotifications' -> 'Enable'
+  = DLP rule               DLP-FinancialData-HighVolume
+
+Retention labels
+  = Retention label        Retain-7Years
+  + Retention label        Retain-3Years
+      Delete after 1095 days
+
+1 to create, 2 to update, 14 unchanged, 1 drift, 0 failed
+WhatIf: nothing was changed.
+```
+
+Run it twice without changing the config and the second run changes nothing.
+
+The background is in the blog post [Purview as code: why -WhatIf deployed everything anyway](https://www.argusit.nl/en/blog/purview-as-code-whatif). Smaller single-purpose scripts live in [purview-scripts](https://github.com/SamKloosK/purview-scripts).
+
+## Why not Microsoft365DSC?
+
+If you want your whole Microsoft 365 tenant as code, use [Microsoft365DSC](https://microsoft365dsc.com). It covers far more workloads and has export and drift reports built in.
+
+This is for a narrower job: the Purview baseline you roll out at a client, kept in a JSON file you can read in one sitting and review in a pull request. No DSC, no LCM, one module with one dependency. It never deletes anything, and it shows you a plan before it changes anything.
+
+## Quick start
+
+```powershell
+Install-Module ExchangeOnlineManagement
+git clone https://github.com/SamKloosK/purview-as-code
+cd purview-as-code
+Import-Module ./PurviewAsCode
+
+New-Item -ItemType Directory ./configs -Force | Out-Null   # configs/ is in .gitignore
+Copy-Item ./examples/baseline.json ./configs/contoso.json
+Test-PurviewConfig -ConfigFile ./configs/contoso.json
+
+Invoke-PurviewDeployment -ConfigFile ./configs/contoso.json -WhatIf
+Invoke-PurviewDeployment -ConfigFile ./configs/contoso.json
+```
+
+`Invoke-PurviewDeployment` connects with `Connect-IPPSSession` (add `-UserPrincipalName` to pick the account), or uses the session you already have with `-UseExistingSession`.
+
+Change these in the examples before you deploy: `TenantDomain`, the identities in `EncryptionRightsDefinitions` (`identity:RIGHTS`, where the identity is a user, group or domain) and the SharePoint URLs in `RetentionLabelPolicies`. `defaultlabelid` in a label policy can be a label name; it's turned into the GUID at deploy time.
+
+## Safety
+
+- **Tenant check.** Before anything changes, the session's tenant ID is compared with the `TenantDomain` in the config (looked up through the public OpenID Connect discovery document, or taken from `TenantId` if you set it). A config for one client doesn't land in another client's tenant because you were still signed in there.
+- **Validation first.** The deploy runs `Test-PurviewConfig` and stops on errors: duplicate label names, a label group in a label policy, a sublabel published without its parent (classic scheme), placeholders left in from the examples.
+- **Nothing is deleted.** Labels, policies and rules that aren't in the config stay in the tenant and show up as drift. Labels published in a label policy but not in the config, and locations that aren't in the config, are also reported and left alone, unless you add `-AllowRemoval`.
+- **Failures don't hide.** A failed change doesn't stop the run, but the run ends with an error listing what failed, so a pipeline sees it.
 
 ## What it covers
 
-| Area | Create | Update existing |
+| Area | Create | Compared and updated |
 | --- | --- | --- |
-| Sensitivity labels and sublabels (encryption, header, footer, watermark) | Yes | Settings are re-applied from the config on every run |
-| Label groups (modern label scheme) | Yes | No settings to update |
-| Container labels for sites and Microsoft 365 groups | Yes | Settings are re-applied |
-| Label policies | Yes | Labels added and removed, advanced settings re-applied |
-| DLP policies and rules | Yes | Locations, mode and rule settings |
-| Retention labels | Yes | No |
-| Retention label policies (publishing labels to locations) | Yes | Missing labels are published, locations are not changed |
-| Retention policies | Yes | No |
+| Sensitivity labels and sublabels | Yes | Display name, tooltip, comment, scope, encryption, header, footer, watermark |
+| Label groups (modern label scheme) | Yes | Display name, tooltip, comment |
+| Container labels (sites and groups) | Yes | Privacy, guest access, external sharing, unmanaged devices |
+| Label policies | Yes | Labels, Exchange locations, advanced settings |
+| DLP policies and rules | Yes | Locations, mode, comment; rule sensitive info types, BlockAccess, notifications, severity |
+| Retention labels | Yes | Duration and comment. Action, type and record status can't change on an existing label, so differences are reported |
+| Retention label policies | Yes | Locations and published labels |
+| Retention policies and rules | Yes | Locations; rule duration, action and expiration option |
 
-Two helper scripts handle the steps around a deploy that you can't do with Security & Compliance PowerShell alone:
+Two helper scripts cover what Security & Compliance PowerShell can't do on its own:
 
-- `scripts/Set-SharePointAppEnforcedRestrictions.ps1` creates the Conditional Access policy that makes the "unmanaged devices" setting of a container label actually do something.
-- `scripts/Set-SiteLabelDefaults.ps1` turns on sensitivity labels for groups and sites in Entra ID, starts the label sync, and later sets default retention labels per document library.
+- `scripts/Set-SharePointAppEnforcedRestrictions.ps1` creates the Conditional Access policy without which the "unmanaged devices" setting of a container label does nothing.
+- `scripts/Set-SiteLabelDefaults.ps1` turns on sensitivity labels for groups and sites in Entra ID and later sets default retention labels per document library.
 
-## Repository layout
+## Config
 
-```
-purview-as-code/
-├── modules/
-│   ├── PurviewConnection.psm1     # Connect to Security & Compliance PowerShell
-│   ├── PurviewLabels.psm1         # Sensitivity labels and label policies
-│   ├── PurviewDLP.psm1            # DLP policies and rules
-│   └── PurviewRetention.psm1      # Retention labels, label policies and retention policies
-├── scripts/
-│   ├── Deploy-PurviewConfig.ps1   # Apply a config to a tenant
-│   ├── Export-PurviewConfig.ps1   # Export a starting point from an existing tenant
-│   ├── Set-SharePointAppEnforcedRestrictions.ps1
-│   └── Set-SiteLabelDefaults.ps1
-├── examples/
-│   ├── baseline.json              # Four-level label taxonomy with label groups, credit card DLP, 7-year mail retention
-│   └── nl-smb.json                # Classic label scheme, BSN DLP, a container label and Dutch fiscal retention labels
-└── tests/
-    └── Test-PurviewConfig.ps1     # Validate a config before you deploy it
-```
+`schema/purview-config.schema.json` describes every setting. The examples reference it, so VS Code completes keys and flags wrong values while you type.
 
-## Prerequisites
+- `examples/baseline.json`: modern label scheme with label groups, credit card DLP, seven-year mail retention.
+- `examples/nl-smb.json`: classic label scheme, BSN DLP, a container label and Dutch fiscal retention labels.
 
-- PowerShell 7
-- `Install-Module ExchangeOnlineManagement`
-- For the helper scripts: `Microsoft.Graph.Authentication`, and `PnP.PowerShell` with your own app registration
-- A Purview role that can manage labels, DLP and retention (for example Compliance Administrator)
+### Classic or modern label scheme
 
-## Usage
+Tenants created from 1 October 2025 use the modern scheme, where sublabels sit in a label group instead of under a parent label. The Purview portal shows a green bar under Information Protection > Sensitivity labels when you're on it.
+
+- Modern: set `"IsLabelGroup": true` on the top-level label and publish only the labels inside the group.
+- Classic: leave `IsLabelGroup` out and publish the parent labels along with their sublabels.
+
+## Running it from a pipeline
 
 ```powershell
-# 1. Copy an example and make it yours
-Copy-Item .\examples\baseline.json .\configs\mytenant.json
-
-# 2. Validate it
-.\tests\Test-PurviewConfig.ps1 -ConfigFile .\configs\mytenant.json
-
-# 3. See what would happen
-.\scripts\Deploy-PurviewConfig.ps1 -ConfigFile .\configs\mytenant.json -WhatIf
-
-# 4. Deploy
-.\scripts\Deploy-PurviewConfig.ps1 -ConfigFile .\configs\mytenant.json
+Invoke-PurviewDeployment -ConfigFile ./configs/contoso.json `
+    -AppId $env:APP_ID -CertificateThumbprint $env:CERT_THUMBPRINT `
+    -PlanFile ./plan.md -WhatIf
 ```
 
-Things to change in the examples before you deploy:
+App-only connections use certificate-based authentication: an app registration with the `Exchange.ManageAsApp` application permission from **Microsoft Exchange Online Protection** (not the similarly named Office 365 Exchange Online one), admin consent, and an Entra role that covers what you deploy. Compliance Administrator covers labels, DLP and retention. `TenantDomain` has to be the primary `.onmicrosoft.com` domain, because it's passed as `-Organization`. See [App-only authentication](https://learn.microsoft.com/powershell/exchange/app-only-auth-powershell-v2).
 
-- `TenantDomain`
-- `EncryptionRightsDefinitions`: the syntax is `identity:RIGHTS`, where the identity is a user, a group or a domain. A domain grants the rights to the organization that owns that domain.
-- `defaultlabelid` in the baseline label policy: the GUID of the label you want as default. It exists only after the first deploy, so run once, look it up with `Get-Label`, then set it.
-- SharePoint URLs in `RetentionLabelPolicies`
+`-PlanFile` writes the plan as a Markdown table, for a change request or a pipeline summary. A sensible split: run with `-WhatIf -PlanFile` on a pull request, and apply after approval.
 
-`configs/` is in `.gitignore`, so your own tenant files stay out of the repository.
+## Other commands
 
-### Optional: watermarks
+- `Get-PurviewLabelState` shows how Purview stores your labels: one line per setting from `LabelActions`, which is where encryption and marking live and what the plan compares against.
+- `Export-PurviewConfig` writes an existing tenant's labels, policies and DLP to a config file as a starting point. Not exported yet: encryption rights, container settings, DLP rule conditions and retention. Run the deploy with `-WhatIf` on the result to see what still differs.
 
-The examples set headers and footers only. The labels module also supports a watermark. To add one, put a `Watermark` block in the label's `ContentMarking`:
+## Known gaps
 
-```json
-"ContentMarking": {
-  "Header": { "Text": "Classification: Confidential", "FontSize": 10, "FontColor": "#FF0000", "Alignment": "Center" },
-  "Watermark": { "Text": "CONFIDENTIAL", "FontSize": 48, "FontColor": "#FF0000", "Layout": "Diagonal" }
-}
+- Label order (priority) isn't managed. On a new tenant the creation order wins.
+- Label policies only take Exchange locations and advanced settings, not scoped policies or exceptions.
+- DLP rules cover sensitive info types and the main actions, not advanced rules.
+- Purview stores label settings in `LabelActions` as key/value pairs. Not every key name has been confirmed in a tenant yet; where one isn't found, the plan says "current value not readable" and sets the value again, so a wrong guess costs a write, not a wrong setting.
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed per version.
+
+## Tests
+
+```powershell
+Invoke-Pester ./tests
 ```
 
-`Layout` is `Horizontal` or `Diagonal`. `FontColor` takes a `#xxxxxx` hex value.
-
-## Classic or modern label scheme
-
-Tenants created from 1 October 2025 use the modern label scheme, and older tenants can migrate to it. In the modern scheme, sublabels sit in a **label group** instead of under a parent label. A label group only has a name, display name, description and priority, and you can't publish it in a label policy: you publish the labels inside it.
-
-You can see which scheme you're on in the Purview portal under **Information Protection > Sensitivity labels**. A green message bar there confirms the modern scheme.
-
-- **Modern scheme:** use `"IsLabelGroup": true` on the top-level label and list only the labels inside the group in your label policies. See `examples/baseline.json`. `Test-PurviewConfig.ps1` flags a label group that has settings or is published in a policy.
-- **Classic scheme:** leave `IsLabelGroup` out. The top-level label is created as a parent label, and you list the parent labels in the policy as well. See `examples/nl-smb.json`.
-
-Migrating from classic to modern is a one-way step in the portal. Read [Migrate parent sensitivity labels to label groups](https://learn.microsoft.com/purview/migrate-sensitivity-label-scheme) before you do it, and update your config afterwards.
-
-## Things to know
-
-- **-WhatIf is handled by these scripts, not by Microsoft.** Security & Compliance PowerShell ignores `-WhatIf`. The modules check `ShouldProcess` before every change instead, and the deploy script passes `-WhatIf` explicitly to every module function.
-- **Classic scheme: publish parent labels too.** If a label policy contains sublabels, list the parent labels in the policy as well. On the modern scheme, don't: label groups can't be published.
-- **Changes take time.** Label policies can take up to 24 hours to reach clients, and published retention labels can take up to 7 days to show up on a site.
-- **Delete is not supported.** Removing something from the config doesn't remove it from the tenant. That's on purpose.
-- **The export is a starting point, not a round trip.** `Export-PurviewConfig.ps1` writes a flat label list with parent IDs and only header markings. Clean it up before you feed it to the deploy script.
+The tests run against stand-ins for the Security & Compliance cmdlets with the same parameter sets as the real ones. They check that `-WhatIf` never writes, that a second run writes nothing, that DLP locations go through `AddXxxLocation`, and that failures and wrong tenants stop the run. They don't replace a test in a demo tenant.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Use it, change it, and test it in a demo tenant before you point it at production.
+MIT, see [LICENSE](LICENSE). Test it in a demo tenant before you point it at production.
