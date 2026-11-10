@@ -69,7 +69,7 @@ Change these in the examples before you deploy: `TenantDomain`, the identities i
 
 - **Tenant check.** Before anything changes, the session's tenant ID is compared with the `TenantDomain` in the config (looked up through the public OpenID Connect discovery document, or taken from `TenantId` if you set it). A config for one client doesn't land in another client's tenant because you were still signed in there.
 - **Validation first.** The deploy runs `Test-PurviewConfig` and stops on errors: duplicate label names, a label group in a label policy, a sublabel published without its parent (classic scheme), placeholders left in from the examples.
-- **Nothing is deleted.** Labels, policies and rules that aren't in the config stay in the tenant and show up as drift. Labels published in a label policy but not in the config, and locations that aren't in the config, are also reported and left alone, unless you add `-AllowRemoval`.
+- **Nothing is deleted.** Labels, policies and rules that aren't in the config stay in the tenant. Sensitivity labels that exist only in the tenant show up as drift; other object types are only looked up by the names in the config. Labels published in a label policy but not in the config, and locations that aren't in the config, are also reported and left alone, unless you add `-AllowRemoval`.
 - **Failures don't hide.** A failed change doesn't stop the run, but the run ends with an error listing what failed, so a pipeline sees it.
 
 ## What it covers

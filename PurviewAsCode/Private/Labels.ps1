@@ -11,7 +11,7 @@ $script:LabelSettingMap = @(
     # Block, config key, Set-Label parameter, action, candidate keys in LabelActions
     ,@('Encryption', 'ProtectionType',                              'EncryptionProtectionType',                    'encrypt',   @('protectiontype'))
     ,@('Encryption', 'EncryptionRightsDefinitions',                 'EncryptionRightsDefinitions',                 'encrypt',   @('rightsdefinitions'))
-    ,@('Encryption', 'EncryptionOfflineAccessDays',                 'EncryptionOfflineAccessDays',                 'encrypt',   @('offlineaccessdays', 'offline'))
+    ,@('Encryption', 'EncryptionOfflineAccessDays',                 'EncryptionOfflineAccessDays',                 'encrypt',   @('offlineaccessdays'))
     ,@('Encryption', 'EncryptionContentExpiredOnDateInDaysOrNever', 'EncryptionContentExpiredOnDateInDaysOrNever', 'encrypt',   @('contentexpiredondateindaysornever'))
     ,@('Encryption', 'PromptUser',                                  'EncryptionPromptUser',                        'encrypt',   @('promptuser'))
     ,@('Encryption', 'DoNotForward',                                'EncryptionDoNotForward',                      'encrypt',   @('donotforward'))
