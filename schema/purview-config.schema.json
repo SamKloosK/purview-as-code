@@ -1,0 +1,588 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SamKloosK/purview-as-code/schema/purview-config.schema.json",
+  "title": "Purview-as-Code config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ClientName",
+    "TenantDomain"
+  ],
+  "$defs": {
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "Name",
+        "DisplayName"
+      ],
+      "properties": {
+        "Name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "DisplayName": {
+          "type": "string"
+        },
+        "Tooltip": {
+          "type": "string"
+        },
+        "Comment": {
+          "type": "string"
+        },
+        "IsLabelGroup": {
+          "type": "boolean",
+          "description": "Modern label scheme: a group that holds labels. No scope, encryption or marking, and it can't be published."
+        },
+        "Scope": {
+          "type": "string",
+          "description": "For example \"File, Email\" or \"Site, UnifiedGroup\"."
+        },
+        "Encryption": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ProtectionType"
+          ],
+          "properties": {
+            "ProtectionType": {
+              "enum": [
+                "Template",
+                "UserDefined"
+              ]
+            },
+            "EncryptionRightsDefinitions": {
+              "type": "string",
+              "description": "identity:RIGHTS pairs separated by ;, for example contoso.com:VIEW,EDIT"
+            },
+            "EncryptionOfflineAccessDays": {
+              "type": "integer",
+              "minimum": -1
+            },
+            "EncryptionContentExpiredOnDateInDaysOrNever": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "PromptUser": {
+              "type": "boolean"
+            },
+            "DoNotForward": {
+              "type": "boolean"
+            },
+            "EncryptOnly": {
+              "type": "boolean"
+            }
+          }
+        },
+        "ContentMarking": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Header": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "Text"
+              ],
+              "properties": {
+                "Text": {
+                  "type": "string"
+                },
+                "FontSize": {
+                  "type": "integer",
+                  "minimum": 6,
+                  "maximum": 72
+                },
+                "FontColor": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "description": "Six-digit hex value. Eight digits (with transparency) isn't accepted."
+                },
+                "Alignment": {
+                  "enum": [
+                    "Left",
+                    "Center",
+                    "Right"
+                  ]
+                }
+              }
+            },
+            "Footer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "Text"
+              ],
+              "properties": {
+                "Text": {
+                  "type": "string"
+                },
+                "FontSize": {
+                  "type": "integer",
+                  "minimum": 6,
+                  "maximum": 72
+                },
+                "FontColor": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "description": "Six-digit hex value. Eight digits (with transparency) isn't accepted."
+                },
+                "Alignment": {
+                  "enum": [
+                    "Left",
+                    "Center",
+                    "Right"
+                  ]
+                }
+              }
+            },
+            "Watermark": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "Text"
+              ],
+              "properties": {
+                "Text": {
+                  "type": "string"
+                },
+                "FontSize": {
+                  "type": "integer",
+                  "minimum": 6,
+                  "maximum": 72
+                },
+                "FontColor": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{6}$",
+                  "description": "Six-digit hex value. Eight digits (with transparency) isn't accepted."
+                },
+                "Layout": {
+                  "enum": [
+                    "Horizontal",
+                    "Diagonal"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "SiteAndGroupProtection": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Privacy": {
+              "enum": [
+                "Public",
+                "Private",
+                "Unspecified"
+              ]
+            },
+            "AllowAccessToGuestUsers": {
+              "type": "boolean"
+            },
+            "ExternalSharing": {
+              "enum": [
+                "ExternalUserAndGuestSharing",
+                "ExternalUserSharingOnly",
+                "ExistingExternalUserSharingOnly",
+                "Disabled"
+              ]
+            },
+            "UnmanagedDevices": {
+              "enum": [
+                "FullAccess",
+                "LimitedAccess",
+                "BlockAccess"
+              ]
+            }
+          }
+        },
+        "SubLabels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/label"
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "ClientName": {
+      "type": "string"
+    },
+    "TenantDomain": {
+      "type": "string",
+      "description": "Primary .onmicrosoft.com domain. The deploy checks that the session is connected to this tenant before it changes anything."
+    },
+    "TenantId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F-]{36}$",
+      "description": "Optional. When set, the tenant check uses it instead of looking it up from TenantDomain."
+    },
+    "SensitivityLabels": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/label"
+      }
+    },
+    "LabelPolicies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "Name",
+          "Labels"
+        ],
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ExchangeLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "Settings": {
+            "type": "object",
+            "description": "Advanced settings. defaultlabelid can be a label name.",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "boolean",
+                "integer"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "DlpPolicies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "Name"
+        ],
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Comment": {
+            "type": "string"
+          },
+          "Mode": {
+            "enum": [
+              "Enable",
+              "TestWithNotifications",
+              "TestWithoutNotifications",
+              "Disable"
+            ]
+          },
+          "ExchangeLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "SharePointLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "OneDriveLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "TeamsLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "Rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "Name"
+              ],
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "ContentContainsSensitiveInformation": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "minCount": {
+                        "type": "integer"
+                      },
+                      "maxCount": {
+                        "type": "integer"
+                      },
+                      "confidencelevel": {
+                        "enum": [
+                          "Low",
+                          "Medium",
+                          "High"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "BlockAccess": {
+                  "type": "boolean"
+                },
+                "NotifyUser": {
+                  "type": [
+                    "string",
+                    "array"
+                  ]
+                },
+                "GenerateIncidentReport": {
+                  "type": [
+                    "string",
+                    "array"
+                  ]
+                },
+                "ReportSeverityLevel": {
+                  "enum": [
+                    "Low",
+                    "Medium",
+                    "High",
+                    "None"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "RetentionLabels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "Name"
+        ],
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Comment": {
+            "type": "string"
+          },
+          "RetentionDuration": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "RetentionAction": {
+            "enum": [
+              "Delete",
+              "Keep",
+              "KeepAndDelete"
+            ]
+          },
+          "RetentionType": {
+            "enum": [
+              "CreationAgeInDays",
+              "ModificationAgeInDays",
+              "TaggedAgeInDays"
+            ]
+          },
+          "IsRecordLabel": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "RetentionLabelPolicies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "Name",
+          "Labels"
+        ],
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Comment": {
+            "type": "string"
+          },
+          "Labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ExchangeLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "SharePointLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "OneDriveLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "ModernGroupLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          }
+        }
+      }
+    },
+    "RetentionPolicies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "Name"
+        ],
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "Comment": {
+            "type": "string"
+          },
+          "ExchangeLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "SharePointLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "OneDriveLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "ModernGroupLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "TeamsChannelLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "TeamsChatLocation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\"All\" or specific addresses, URLs or groups."
+          },
+          "Rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "Name"
+              ],
+              "properties": {
+                "Name": {
+                  "type": "string"
+                },
+                "RetentionDuration": {
+                  "type": [
+                    "integer",
+                    "string"
+                  ]
+                },
+                "RetentionDurationDisplayHint": {
+                  "enum": [
+                    "Days",
+                    "Months",
+                    "Years"
+                  ]
+                },
+                "RetentionComplianceAction": {
+                  "enum": [
+                    "Keep",
+                    "Delete",
+                    "KeepAndDelete"
+                  ]
+                },
+                "ExpirationDateOption": {
+                  "enum": [
+                    "CreationAgeInDays",
+                    "ModificationAgeInDays"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
